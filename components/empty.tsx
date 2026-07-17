@@ -1,0 +1,1 @@
+export function Empty({ title, description }: { title: string; description: string }) { return <div className="card py-12 text-center"><div className="text-4xl">☁</div><h3 className="mt-3 font-black text-ink">{title}</h3><p className="mt-2 text-sm text-slate-500">{description}</p></div>; }
