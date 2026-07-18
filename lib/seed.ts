@@ -29,10 +29,11 @@ export async function createSeedData(): Promise<AppData> {
     const creatorId = users[index % users.length].id;
     const companion = index % 4 === 0 ? [users[(index + 1) % users.length].id] : [];
     const maxMembers = index % 3 === 0 ? 2 : index % 3 === 1 ? 4 : 6;
+    const memberIds = [creatorId, ...companion];
     return {
       id: `a-${index + 1}`, creatorId, title: index < 6 ? title : `${title} · 第${Math.floor(index / 6) + 1}期`, description,
       category, location, startTime: `${base}${String(18 + (index % 8)).padStart(2, "0")}T${index % 2 ? "19:00" : "14:00"}`,
-      maxMembers, memberIds: [creatorId, ...companion], tags, status: "open", createdAt: `${base}12T10:00:00`,
+      maxMembers, memberIds, tags, status: memberIds.length >= maxMembers ? "full" : "open", createdAt: `${base}12T10:00:00`,
     };
   });
   const comments: Comment[] = [
@@ -52,6 +53,7 @@ export async function createSeedData(): Promise<AppData> {
     { id: `n-w-${u.id}`, userId: u.id, type: "system" as const, content: "欢迎来到搭个伴 CampusMate！完善兴趣标签可以获得更准的搭子推荐。", read: i === 0 ? false : true, createdAt: `${base}12T10:00:00` }
   ));
   notifications.unshift({ id: "n-i-1", userId: "u-lin", type: "invite", content: "周同学邀请你加入《周五羽毛球新手局》，去通知中心处理吧。", read: false, createdAt: `${base}14T12:00:00` });
+  notifications.unshift({ id: "n-r-1", userId: "u-lin", type: "reminder", content: "你参加的《期末高数冲刺自习》今天 14:00 开始，记得准时到场。", read: false, createdAt: `${base}18T08:00:00` });
   const messages: Message[] = [
     { id: "m-1", senderId: "u-zhou", receiverId: "u-lin", content: "你好呀，看到你也喜欢摄影！", createdAt: `${base}14T20:00:00` },
     { id: "m-2", senderId: "u-lin", receiverId: "u-zhou", content: "对呀，周末的夜景摄影散步你去吗？", createdAt: `${base}14T20:03:00` },

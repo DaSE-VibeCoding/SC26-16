@@ -5,7 +5,7 @@ import { Activity, AppData, Application, Comment, CreateActivityInput, Favorite,
 const KEY = "campusmate_data_v1";
 const SESSION_KEY = "campusmate_session_v1";
 const VERSION_KEY = "campusmate_version";
-const VERSION = "2";
+const VERSION = "3";
 const uid = (prefix: string) => `${prefix}-${crypto.randomUUID()}`;
 const now = () => new Date().toISOString();
 
@@ -59,6 +59,7 @@ export const storage = {
     if (!application || application.status !== "pending") throw new Error("该申请无法处理");
     const activity = data.activities.find((a) => a.id === application.activityId);
     if (!activity || activity.creatorId !== ownerId) throw new Error("你无权处理此申请");
+    if (approved && activity.memberIds.includes(application.applicantId)) { application.status = "accepted"; save(data); return; }
     if (approved && activity.memberIds.length >= activity.maxMembers) throw new Error("活动名额已满");
     application.status = approved ? "accepted" : "rejected";
     if (approved) { activity.memberIds.push(application.applicantId); syncStatus(activity); addNotice(data, application.applicantId, "approved", "你已成功加入《" + activity.title + "》，请留意活动时间与地点。"); }
@@ -75,7 +76,9 @@ export const storage = {
   cancelActivity(userId: string, activityId: string) {
     const data = load(); const activity = data.activities.find((a) => a.id === activityId);
     if (!activity || activity.creatorId !== userId) throw new Error("你无权取消此活动");
-    activity.status = "cancelled"; activity.memberIds.filter((id) => id !== userId).forEach((id) => addNotice(data, id, "cancel", "发起人已取消《" + activity.title + "》")); save(data);
+    activity.status = "cancelled";
+    data.invitations.forEach((i) => { if (i.activityId === activityId && i.status === "pending") i.status = "declined"; });
+    activity.memberIds.filter((id) => id !== userId).forEach((id) => addNotice(data, id, "cancel", "发起人已取消《" + activity.title + "》")); save(data);
   },
   markNoticesRead(userId: string) { const data = load(); data.notifications.forEach((n) => { if (n.userId === userId) n.read = true; }); save(data); },
   addComment(userId: string, activityId: string, content: string) {
@@ -131,9 +134,11 @@ export const storage = {
       save(data); return;
     }
     if (activity.status === "cancelled" || activity.status === "finished") throw new Error("该活动已结束或取消，无法加入");
-    if (activity.memberIds.includes(userId)) { invitation.status = "accepted"; save(data); return; }
+    const pendingApp = data.applications.find((p) => p.activityId === activity.id && p.applicantId === userId && p.status === "pending");
+    if (activity.memberIds.includes(userId)) { invitation.status = "accepted"; if (pendingApp) pendingApp.status = "accepted"; save(data); return; }
     if (activity.memberIds.length >= activity.maxMembers) throw new Error("活动名额已满，无法接受邀请");
     invitation.status = "accepted"; activity.memberIds.push(userId); syncStatus(activity);
+    if (pendingApp) pendingApp.status = "accepted";
     addNotice(data, invitation.inviterId, "system", (responder?.nickname ?? "对方") + " 接受了邀请，已加入《" + activity.title + "》");
     addNotice(data, userId, "approved", "你已通过邀请加入《" + activity.title + "》，请留意活动时间与地点。");
     save(data);

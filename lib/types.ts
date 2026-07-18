@@ -13,7 +13,7 @@ export interface Application {
   id: string; activityId: string; applicantId: string; message: string; status: ApplicationStatus; createdAt: string;
 }
 export interface Notification {
-  id: string; userId: string; type: "application" | "approved" | "rejected" | "exit" | "cancel" | "invite" | "comment" | "system"; content: string; read: boolean; createdAt: string;
+  id: string; userId: string; type: "application" | "approved" | "rejected" | "exit" | "cancel" | "invite" | "comment" | "reminder" | "system"; content: string; read: boolean; createdAt: string;
 }
 export type InvitationStatus = "pending" | "accepted" | "declined";
 export interface Comment {

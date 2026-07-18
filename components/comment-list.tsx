@@ -6,7 +6,7 @@ export function CommentList({ activityId }: { activityId: string }) {
   const { data, currentUser, addComment, deleteComment } = useApp();
   const [text, setText] = useState(""); const [error, setError] = useState(""); const [ok, setOk] = useState("");
   if (!data) return null;
-  const comments = data.comments.filter((c) => c.activityId === activityId);
+  const comments = data.comments.filter((c) => c.activityId === activityId).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const author = (id: string) => data.users.find((u) => u.id === id);
   function flash(message: string) { setOk(message); setError(""); window.setTimeout(() => setOk(""), 2500); }
   function submit(e: FormEvent) { e.preventDefault(); try { addComment(activityId, text); setText(""); flash("评论发布成功"); } catch (err) { setError(err instanceof Error ? err.message : "评论失败"); setOk(""); } }

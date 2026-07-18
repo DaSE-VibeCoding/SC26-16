@@ -13,6 +13,7 @@ const meta: Record<Notification["type"], [string, string, string]> = {
   exit: ["↩", "成员退出", "bg-amber-50 text-amber-600"],
   cancel: ["⊘", "活动取消", "bg-slate-100 text-slate-500"],
   invite: ["✉", "组队邀请", "bg-violet-50 text-violet-600"],
+  reminder: ["◷", "活动提醒", "bg-teal-50 text-teal-600"],
   comment: ["❝", "新评论", "bg-orange-50 text-orange-600"],
   system: ["◈", "系统消息", "bg-indigo-50 text-indigo-600"],
 };
@@ -26,7 +27,7 @@ export default function NotificationsPage() {
   const mine = data.notifications.filter((n) => n.userId === currentUser.id);
   const unread = mine.filter((n) => !n.read);
   const list = tab === "unread" ? unread : mine;
-  const invitations = data.invitations.filter((i) => i.inviteeId === currentUser.id && i.status === "pending");
+  const invitations = data.invitations.filter((i) => i.inviteeId === currentUser.id && i.status === "pending" && data.activities.some((a) => a.id === i.activityId && a.status !== "cancelled" && a.status !== "finished"));
   function flash(message: string) { setOk(message); setError(""); window.setTimeout(() => setOk(""), 2500); }
   function respond(id: string, accept: boolean) { try { respondInvitation(id, accept); flash(accept ? "已接受邀请，快去“我的组队”看看吧" : "已婉拒该邀请"); } catch (err) { setError(err instanceof Error ? err.message : "操作失败"); setOk(""); } }
   function readAll() { try { markNoticesRead(); flash("已全部标记为已读"); } catch (err) { setError(err instanceof Error ? err.message : "操作失败"); } }
