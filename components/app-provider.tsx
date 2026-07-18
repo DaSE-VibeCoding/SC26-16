@@ -1,5 +1,5 @@
 "use client";
-import { AppData, CreateActivityInput, User } from "@/lib/types";
+import { AppData, CreateActivityInput, Report, User } from "@/lib/types";
 import { storage } from "@/lib/storage";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
@@ -9,6 +9,9 @@ type AppContextValue = {
   register: (input: { nickname: string; college: string; grade: string; interests: string[]; password: string }) => Promise<void>;
   reset: () => Promise<void>; createActivity: (input: CreateActivityInput) => string; apply: (activityId: string, message: string) => void;
   review: (applicationId: string, approved: boolean) => void; exitActivity: (activityId: string) => void; cancelActivity: (activityId: string) => void; markNoticesRead: () => void;
+  addComment: (activityId: string, content: string) => void; deleteComment: (commentId: string) => void; toggleFavorite: (activityId: string) => boolean;
+  invite: (activityId: string, inviteeId: string, message: string) => void; respondInvitation: (invitationId: string, accept: boolean) => void;
+  report: (targetType: Report["targetType"], targetId: string, reason: string, detail: string) => void; sendMessage: (receiverId: string, content: string) => void;
 };
 const AppContext = createContext<AppContextValue | null>(null);
 
@@ -34,6 +37,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     exitActivity: (activityId) => { storage.exitActivity(requireUser().id, activityId); refresh(); },
     cancelActivity: (activityId) => { storage.cancelActivity(requireUser().id, activityId); refresh(); },
     markNoticesRead: () => { storage.markNoticesRead(requireUser().id); refresh(); },
+    addComment: (activityId, content) => { storage.addComment(requireUser().id, activityId, content); refresh(); },
+    deleteComment: (commentId) => { storage.deleteComment(requireUser().id, commentId); refresh(); },
+    toggleFavorite: (activityId) => { const added = storage.toggleFavorite(requireUser().id, activityId); refresh(); return added; },
+    invite: (activityId, inviteeId, message) => { storage.invite(requireUser().id, activityId, inviteeId, message); refresh(); },
+    respondInvitation: (invitationId, accept) => { storage.respondInvitation(requireUser().id, invitationId, accept); refresh(); },
+    report: (targetType, targetId, reason, detail) => { storage.report(requireUser().id, targetType, targetId, reason, detail); refresh(); },
+    sendMessage: (receiverId, content) => { storage.sendMessage(requireUser().id, receiverId, content); refresh(); },
   }), [data, currentUser, loading, refresh]);
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }
