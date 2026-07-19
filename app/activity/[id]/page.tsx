@@ -6,6 +6,7 @@ import { ReportModal } from "@/components/report-modal";
 import { UserAvatar } from "@/components/user-avatar";
 import { Evaluation } from "@/lib/types";
 import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import { FormEvent, useState } from "react";
 
 const tone: Record<string, string> = { 自习搭子: "bg-sky-50 text-sky-600", 运动搭子: "bg-emerald-50 text-emerald-600", 饭搭子: "bg-orange-50 text-orange-600", 比赛搭子: "bg-violet-50 text-violet-600", 游戏搭子: "bg-rose-50 text-rose-600", 兴趣活动: "bg-amber-50 text-amber-600" };
@@ -39,7 +40,10 @@ export default function ActivityDetailPage() {
   const activityEvaluations = data.evaluations.filter((item) => item.activityId === activity.id);
   const evaluationCandidates = currentUser && activity.status === "finished" ? members.filter((member) => member.id !== currentUser.id && !activityEvaluations.some((item) => item.reviewerId === currentUser.id && item.revieweeId === member.id)) : [];
   const canViewProfile = (userId: string) => userId === currentUser?.id || data.users.find((user) => user.id === userId)?.profileVisible;
-  const statusText = activity.status === "cancelled" ? "活动已取消" : activity.status === "finished" ? "活动已结束" : activity.status === "full" ? "活动已满员" : `还差 ${Math.max(free, 0)} 人`;
+  const currentTime = Date.now();
+  const isOngoing = currentTime >= new Date(activity.startTime).getTime() && currentTime < new Date(activity.endTime).getTime();
+  const isStartingSoon = !isOngoing && new Date(activity.startTime).getTime() - currentTime < 24 * 60 * 60 * 1000;
+  const statusText = activity.status === "cancelled" ? "活动已取消" : activity.status === "finished" ? "活动已结束" : isOngoing ? "活动进行中" : activity.status === "full" ? "活动已满员" : isStartingSoon ? "即将开始" : `报名中 · 还差 ${Math.max(free, 0)} 人`;
   const statusClass = activity.status === "cancelled" || activity.status === "finished" ? "tag bg-slate-100 text-slate-500" : activity.status === "full" ? "tag bg-rose-50 text-rose-600" : "tag bg-emerald-50 text-emerald-600";
 
   function flash(messageText: string) {
@@ -92,6 +96,14 @@ export default function ActivityDetailPage() {
       }
     }
   }
+  async function share() {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      flash("活动链接已复制，可分享给同学");
+    } catch {
+      flash("请从浏览器地址栏复制活动链接");
+    }
+  }
   function sendInvite() {
     try {
       const nickname = inviteeName.trim();
@@ -139,6 +151,7 @@ export default function ActivityDetailPage() {
         <div className="mt-5 flex flex-wrap gap-2">{activity.tags.map((tag) => <span key={tag} className="tag bg-slate-100 text-slate-600">#{tag}</span>)}</div>
         {currentUser && <div className="mt-5 flex flex-wrap gap-2 border-t border-slate-100 pt-4">
           <button className={`btn py-2 ${isFavorite ? "bg-amber-50 text-amber-600 hover:bg-amber-100" : "bg-lavender text-brand hover:bg-indigo-100"}`} onClick={() => { toggleFavorite(activityId); flash(isFavorite ? "已取消收藏" : "已收藏"); }}>{isFavorite ? "★ 已收藏" : "☆ 收藏"}</button>
+          <button className="btn-soft py-2" onClick={share}>↗ 分享</button>
           <button className="btn-danger py-2" onClick={() => setShowReport(true)}>⚠ 举报</button>
         </div>}
         {ok && <p className="mt-3 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-600">{ok}</p>}
@@ -147,7 +160,7 @@ export default function ActivityDetailPage() {
         <section className="card">
           <p className="text-xs font-bold text-slate-400">活动发起人</p>
           {creator && <div className="mt-2 flex items-center gap-3"><UserAvatar user={creator} size="h-11 w-11" /><h2 className="text-lg font-black text-ink">{creator.nickname}</h2></div>}
-          {creator && canViewProfile(creator.id) ? <><p className="mt-2 text-sm text-slate-500">{creator.college} · {creator.grade}</p><div className="mt-3 flex flex-wrap gap-1">{creator.interests.map((x) => <span className="tag bg-lavender text-brand" key={x}>{x}</span>)}</div></> : <p className="mt-1 text-sm text-slate-500">该同学选择了仅展示基本名片。</p>}
+          {creator && canViewProfile(creator.id) ? <><p className="mt-2 text-sm text-slate-500">{creator.college} · {creator.grade}</p><p className="mt-1 text-xs text-slate-400">信用分 {creator.creditScore} · 已发起 {data.activities.filter((item) => item.creatorId === creator.id).length} 场活动</p><div className="mt-3 flex flex-wrap gap-1">{creator.interests.map((x) => <span className="tag bg-lavender text-brand" key={x}>{x}</span>)}</div></> : <p className="mt-1 text-sm text-slate-500">该同学选择了仅展示基本名片。</p>}
         </section>
         <section className="card">
           <h2 className="font-black text-ink">已加入成员</h2>
@@ -161,11 +174,14 @@ export default function ActivityDetailPage() {
       {!currentUser ? <p className="mt-3 text-sm text-slate-500">登录后即可申请加入。<button className="ml-2 font-bold text-brand" onClick={() => router.push("/login")}>去登录</button></p>
         : activity.status === "cancelled" ? <p className="mt-3 text-sm text-slate-500">该活动已取消。</p>
           : activity.status === "finished" ? <p className="mt-3 text-sm text-slate-500">该活动已结束，可在下方评价同行成员。</p>
-            : isCreator ? <div className="mt-3 flex flex-wrap gap-3"><p className="flex-1 text-sm text-slate-500">你是发起人，可在“我的组队”处理申请，也可以邀请同学加入。</p><button data-testid="activity-cancel" className="btn-danger" onClick={cancel}>取消活动</button></div>
+            : isCreator ? <div className="mt-3 flex flex-wrap gap-3"><p className="flex-1 text-sm text-slate-500">你是发起人，可在“我的组队”处理申请，也可以邀请同学加入。</p><Link data-testid="activity-edit" className="btn-soft" href={`/create?edit=${activity.id}`}>编辑活动</Link><button data-testid="activity-cancel" className="btn-danger" onClick={cancel}>取消活动</button></div>
               : isMember ? <div className="mt-3 flex flex-wrap gap-3"><p className="flex-1 text-sm text-emerald-600">你已加入，记得准时到达并选择公共地点见面。</p><button data-testid="activity-exit" className="btn-danger" onClick={leave}>退出活动</button></div>
                 : application ? <div className="mt-3 flex flex-wrap items-center gap-3 rounded-2xl bg-lavender p-4 text-sm text-brand"><p className="flex-1">你的申请状态：<b>{application.status === "pending" ? "等待发起人审核" : application.status === "accepted" ? "已通过" : application.status === "withdrawn" ? "已撤回" : "未通过"}</b></p>{application.status === "pending" && <button data-testid={`application-withdraw-${application.id}`} className="btn-soft py-2" onClick={withdraw}>撤回申请</button>}</div>
-                  : free <= 0 ? <p className="mt-3 text-sm text-rose-600">该活动目前已满员。</p>
-                    : <form className="mt-3 flex flex-col gap-3 sm:flex-row" onSubmit={submit}><input className="field flex-1" value={message} onChange={(e) => setMessage(e.target.value)} maxLength={100} placeholder="简单介绍一下自己或说明参与意愿（可选）" /><button data-testid="activity-apply-submit" className="btn-primary whitespace-nowrap">提交申请</button></form>}
+                  : <form className="mt-3 flex flex-col gap-3 sm:flex-row" onSubmit={submit}><input className="field flex-1" value={message} onChange={(e) => setMessage(e.target.value)} maxLength={100} placeholder="简单介绍一下自己或说明参与意愿（可选）" /><button data-testid="activity-apply-submit" className="btn-primary whitespace-nowrap">{free <= 0 ? "申请候补" : "提交申请"}</button></form>}
+    </section>
+    <section className="card mt-5 grid gap-5 sm:grid-cols-2">
+      <div><h2 className="text-lg font-black text-ink">活动规则</h2><ul className="mt-3 space-y-2 text-sm leading-6 text-slate-600"><li>• 请按约定时间抵达公共集合地点。</li><li>• 临时无法参加请尽早退出或联系发起人。</li><li>• 尊重其他成员，遇到问题可使用举报功能。</li></ul></div>
+      <div><h2 className="text-lg font-black text-ink">活动时间线</h2><ol className="mt-3 space-y-2 text-sm text-slate-600"><li>✓ {new Date(activity.createdAt).toLocaleDateString("zh-CN")} 创建活动</li><li>○ {new Date(activity.startTime).toLocaleString("zh-CN", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })} 开始集合</li><li>○ {new Date(activity.endTime).toLocaleString("zh-CN", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })} 活动结束</li></ol></div>
     </section>
     {currentUser && isMember && activity.status !== "cancelled" && activity.status !== "finished" && <section className="card mt-5">
       <h2 className="text-lg font-black text-ink">邀请同学</h2>

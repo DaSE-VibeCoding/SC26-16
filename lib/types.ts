@@ -66,6 +66,7 @@ export interface Activity {
   status: ActivityStatus;
   cancelReason?: string;
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface Application {
@@ -177,6 +178,8 @@ export interface CreateActivityInput {
   maxMembers: number;
   tags: string[];
 }
+
+export type UpdateActivityInput = CreateActivityInput;
 
 export interface SubmitEvaluationInput {
   activityId: string;

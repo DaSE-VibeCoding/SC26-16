@@ -14,6 +14,7 @@ import {
   Notification,
   Report,
   SubmitEvaluationInput,
+  UpdateActivityInput,
   UpdateProfileInput,
   UpdateSettingsInput,
   User,
@@ -103,6 +104,21 @@ function load(): AppData {
 
 function save(data: AppData) {
   localStorage.setItem(KEY, JSON.stringify(data));
+}
+
+function validateActivityInput(input: CreateActivityInput | UpdateActivityInput) {
+  const title = input.title.trim();
+  const description = input.description.trim();
+  const location = input.location.trim();
+  const start = new Date(input.startTime).getTime();
+  const end = new Date(input.endTime).getTime();
+  if (title.length < 2 || title.length > 40) throw new Error("活动标题需为 2 至 40 个字符");
+  if (description.length < 5 || description.length > 300) throw new Error("活动说明需为 5 至 300 个字符");
+  if (!location) throw new Error("请填写集合地点");
+  if (!Number.isFinite(start) || start <= Date.now()) throw new Error("活动时间需要晚于当前时间");
+  if (!Number.isFinite(end) || end <= start) throw new Error("结束时间需要晚于开始时间");
+  if (!Number.isInteger(input.maxMembers) || input.maxMembers < 2 || input.maxMembers > 20) throw new Error("活动人数需设置为 2 至 20 人");
+  return { ...input, title, description, location, tags: input.tags.map((tag) => tag.trim()).filter(Boolean).slice(0, 8) };
 }
 
 function addCredit(data: AppData, userId: string, change: number, reason: string, activityId?: string) {
@@ -245,19 +261,34 @@ export const storage = {
   },
   createActivity(userId: string, input: CreateActivityInput) {
     const data = load();
-    const activity: Activity = { id: uid("a"), creatorId: userId, ...input, memberIds: [userId], status: "open", createdAt: now() };
+    const validInput = validateActivityInput(input);
+    const activity: Activity = { id: uid("a"), creatorId: userId, ...validInput, memberIds: [userId], status: "open", createdAt: now() };
     syncStatus(activity);
     data.activities.unshift(activity);
     addCredit(data, userId, 3, "发布活动", activity.id);
     save(data);
     return activity;
   },
+  updateActivity(userId: string, activityId: string, input: UpdateActivityInput) {
+    const data = load();
+    const activity = data.activities.find((item) => item.id === activityId);
+    if (!activity || activity.creatorId !== userId) throw new Error("你无权编辑此活动");
+    if (activity.status === "cancelled" || activity.status === "finished") throw new Error("已取消或结束的活动不能编辑");
+    const validInput = validateActivityInput(input);
+    if (validInput.maxMembers < activity.memberIds.length) throw new Error(`人数上限不能低于当前 ${activity.memberIds.length} 位成员`);
+    const changedSchedule = activity.startTime !== validInput.startTime || activity.endTime !== validInput.endTime || activity.location !== validInput.location || activity.maxMembers !== validInput.maxMembers;
+    Object.assign(activity, validInput, { updatedAt: now() });
+    syncStatus(activity);
+    if (changedSchedule) {
+      activity.memberIds.filter((id) => id !== userId).forEach((id) => addNotice(data, id, "reminder", `《${activity.title}》的时间、地点或人数已更新，请留意最新安排。`, activity.id));
+    }
+    save(data);
+  },
   apply(userId: string, activityId: string, message: string) {
     const data = load();
     const activity = data.activities.find((a) => a.id === activityId);
     if (!activity || activity.status === "cancelled" || activity.status === "finished") throw new Error("活动不可申请");
     if (activity.memberIds.includes(userId)) throw new Error("你已经是活动成员");
-    if (activity.memberIds.length >= activity.maxMembers) throw new Error("活动名额已满");
     if (data.applications.some((a) => a.activityId === activityId && a.applicantId === userId && a.status === "pending")) throw new Error("你已经提交过申请");
     const application: Application = { id: uid("p"), activityId, applicantId: userId, message: message.trim(), status: "pending", createdAt: now() };
     data.applications.unshift(application);
