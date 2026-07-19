@@ -1,7 +1,7 @@
 export const categories = ["自习搭子", "运动搭子", "饭搭子", "比赛搭子", "游戏搭子", "兴趣活动"] as const;
 export type Category = (typeof categories)[number];
 export type ActivityStatus = "open" | "full" | "cancelled" | "finished";
-export type ApplicationStatus = "pending" | "accepted" | "rejected" | "withdrawn";
+export type ApplicationStatus = "pending" | "accepted" | "rejected" | "withdrawn" | "cancelled";
 export type NotificationType =
   | "application"
   | "approved"
@@ -46,6 +46,7 @@ export interface User {
   availability: Availability;
   avatarTone: AvatarTone;
   avatarUrl?: string;
+  isAdmin?: boolean;
   passwordHash: string;
   createdAt: string;
 }

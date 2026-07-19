@@ -85,6 +85,7 @@ function normalize(data: AppData): AppData {
     user.availability ??= "时间灵活";
     user.avatarTone ??= "indigo";
     user.avatarUrl ??= "";
+    user.isAdmin ??= user.id === "u-lin";
   });
   syncDerived(data);
   return data;
@@ -143,7 +144,8 @@ function syncDerived(data: AppData) {
   });
   data.applications.forEach((application) => {
     const activity = data.activities.find((item) => item.id === application.activityId);
-    if (application.status === "pending" && activity && (activity.status === "finished" || activity.status === "cancelled")) application.status = "withdrawn";
+    if (application.status === "pending" && activity && activity.status === "finished") application.status = "withdrawn";
+    if (application.status === "pending" && activity?.status === "cancelled") application.status = "cancelled";
   });
   data.invitations.forEach((invitation) => {
     const activity = data.activities.find((item) => item.id === invitation.activityId);
@@ -164,7 +166,11 @@ export const storage = {
     }
     localStorage.setItem(VERSION_KEY, VERSION);
   },
-  read: load,
+  read() {
+    const data = load();
+    save(data);
+    return data;
+  },
   session() {
     return localStorage.getItem(SESSION_KEY);
   },
@@ -308,6 +314,12 @@ export const storage = {
     activity.cancelReason = reason.trim() || "发起人取消活动";
     data.invitations.forEach((i) => {
       if (i.activityId === activityId && i.status === "pending") i.status = "declined";
+    });
+    data.applications.forEach((application) => {
+      if (application.activityId === activityId && application.status === "pending") {
+        application.status = "cancelled";
+        addNotice(data, application.applicantId, "cancel", `《${activity.title}》已取消，你的申请已自动关闭。`, activity.id);
+      }
     });
     if (new Date(activity.startTime).getTime() - Date.now() < 24 * 60 * 60 * 1000) addCredit(data, userId, -3, "临近活动取消", activity.id);
     activity.memberIds
@@ -480,8 +492,9 @@ export const storage = {
     save(data);
     localStorage.setItem(VERSION_KEY, VERSION);
   },
-  resolveReport(reportId: string, action: "resolved" | "dismissed") {
+  resolveReport(adminId: string, reportId: string, action: "resolved" | "dismissed") {
     const data = load();
+    if (!data.users.find((user) => user.id === adminId)?.isAdmin) throw new Error("仅演示管理员可以处理举报");
     const report = data.reports.find((item) => item.id === reportId);
     if (!report || report.status !== "pending") throw new Error("该举报无法处理");
     report.status = action;
@@ -496,8 +509,9 @@ export const storage = {
     }
     save(data);
   },
-  moderateActivity(activityId: string, action: "cancel" | "reopen") {
+  moderateActivity(adminId: string, activityId: string, action: "cancel" | "reopen") {
     const data = load();
+    if (!data.users.find((user) => user.id === adminId)?.isAdmin) throw new Error("仅演示管理员可以审核活动");
     const activity = data.activities.find((item) => item.id === activityId);
     if (!activity) throw new Error("活动不存在");
     if (action === "cancel") {

@@ -11,8 +11,10 @@ export default function AdminPage() {
   const [error, setError] = useState("");
   useEffect(() => {
     if (!currentUser) router.replace("/login");
+    else if (!currentUser.isAdmin) router.replace("/");
   }, [currentUser, router]);
   if (!data || !currentUser) return <main className="page text-center text-slate-500">正在加载…</main>;
+  if (!currentUser.isAdmin) return <main className="page text-center text-slate-500">正在返回发现页…</main>;
   const pendingReports = data.reports.filter((item) => item.status === "pending");
   const pendingApplications = data.applications.filter((item) => item.status === "pending").length;
   const openActivities = data.activities.filter((item) => item.status === "open").length;

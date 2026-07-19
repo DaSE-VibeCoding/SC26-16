@@ -13,8 +13,11 @@ test("authenticated user can create an activity and persist it locally", async (
   await page.locator('a[href="/create"]').first().click();
   const title = `自动化测试活动 ${Date.now()}`;
   await page.locator("form input").first().fill(title);
-  await page.locator('input[type="datetime-local"]').first().fill("2026-07-25T19:00");
-  await page.locator('input[type="datetime-local"]').nth(1).fill("2026-07-25T21:00");
+  const future = new Date();
+  future.setDate(future.getDate() + 2);
+  const date = `${future.getFullYear()}-${String(future.getMonth() + 1).padStart(2, "0")}-${String(future.getDate()).padStart(2, "0")}`;
+  await page.locator('input[type="datetime-local"]').first().fill(`${date}T19:00`);
+  await page.locator('input[type="datetime-local"]').nth(1).fill(`${date}T21:00`);
   await page.locator("form input").nth(4).fill("自动化测试地点");
   await page.locator("textarea").fill("这是一条由 Playwright 创建的活动说明。");
   await page.getByTestId("activity-create-submit").click();
@@ -57,4 +60,28 @@ test("notification center can delete a notification", async ({ page }) => {
     const data = JSON.parse(localStorage.getItem("campusmate_data_v1") || "{}");
     return !data.notifications?.some((notice: { id: string }) => notice.id === "n-test-delete");
   });
+});
+
+test("ordinary users cannot access the administrator view", async ({ page }) => {
+  await signedInPage(page, "u-zhou");
+  await page.goto("/admin");
+  await expect(page).toHaveURL("/");
+  await expect(page.getByRole("heading", { name: "今天，找个同学一起完成。" })).toBeVisible();
+});
+
+test("cancelling an activity closes its pending applications", async ({ page }) => {
+  await signedInPage(page, "u-chen");
+  await page.goto("/activity/a-2");
+  await page.getByTestId("activity-apply-submit").click();
+
+  await page.evaluate(() => localStorage.setItem("campusmate_session_v1", "u-zhou"));
+  await page.reload();
+  page.once("dialog", (dialog) => dialog.accept("场地临时关闭"));
+  await page.getByTestId("activity-cancel").click();
+
+  const applicationStatus = await page.evaluate(() => {
+    const data = JSON.parse(localStorage.getItem("campusmate_data_v1") || "{}");
+    return data.applications?.find((item: { activityId: string; applicantId: string; status: string }) => item.activityId === "a-2" && item.applicantId === "u-chen")?.status;
+  });
+  expect(applicationStatus).toBe("cancelled");
 });

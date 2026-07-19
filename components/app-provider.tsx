@@ -53,6 +53,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!currentUser) throw new Error("请先登录后再操作");
     return currentUser;
   };
+  const requireAdmin = () => {
+    const user = requireUser();
+    if (!user.isAdmin) throw new Error("仅演示管理员可以执行此操作");
+    return user;
+  };
   const value = useMemo<AppContextValue>(
     () => ({
       data,
@@ -154,13 +159,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         refresh();
       },
       resolveReport: (reportId, action) => {
-        requireUser();
-        storage.resolveReport(reportId, action);
+        storage.resolveReport(requireAdmin().id, reportId, action);
         refresh();
       },
       moderateActivity: (activityId, action) => {
-        requireUser();
-        storage.moderateActivity(activityId, action);
+        storage.moderateActivity(requireAdmin().id, activityId, action);
         refresh();
       },
     }),
