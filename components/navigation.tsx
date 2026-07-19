@@ -4,11 +4,12 @@ import { usePathname } from "next/navigation";
 import { useApp } from "./app-provider";
 
 const links = [
-  ["/", "⌂", "发现"], ["/create", "＋", "发布"], ["/my-team", "◎", "我的组队"], ["/profile", "◉", "我的"],
+  ["/", "⌂", "发现"], ["/create", "＋", "发布"], ["/my-team", "◎", "我的组队"], ["/notifications", "✉", "通知"], ["/profile", "◉", "我的"],
 ];
 export function Navigation() {
-  const { currentUser, loading } = useApp(); const pathname = usePathname();
+  const { currentUser, loading, data } = useApp(); const pathname = usePathname();
   if (loading) return null;
+  const unread = currentUser && data ? data.notifications.filter((n) => n.userId === currentUser.id && !n.read).length : 0;
   return <>
     <header className="sticky top-0 z-20 border-b border-indigo-50 bg-white/90 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
@@ -17,7 +18,7 @@ export function Navigation() {
       </div>
     </header>
     {currentUser && <nav className="fixed bottom-0 z-30 flex w-full justify-around border-t border-indigo-100 bg-white px-2 py-2 shadow-lg sm:sticky sm:top-16 sm:order-2 sm:mx-auto sm:mt-3 sm:max-w-xl sm:rounded-2xl sm:border sm:shadow-none">
-      {links.map(([href, icon, label]) => <Link key={href} href={href} className={`flex min-w-16 flex-col items-center rounded-xl px-3 py-1 text-xs font-bold ${pathname === href ? "bg-lavender text-brand" : "text-slate-500"}`}><span className="text-lg">{icon}</span>{label}</Link>)}
+      {links.map(([href, icon, label]) => <Link key={href} href={href} className={`flex min-w-14 flex-col items-center rounded-xl px-2.5 py-1 text-xs font-bold sm:min-w-16 sm:px-3 ${pathname === href ? "bg-lavender text-brand" : "text-slate-500"}`}><span className="relative text-lg">{icon}{href === "/notifications" && unread > 0 && <span className="absolute -right-3 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-rose-500 px-1 text-[10px] font-bold leading-none text-white">{unread > 99 ? "99+" : unread}</span>}</span>{label}</Link>)}
     </nav>}
   </>;
 }
