@@ -11,7 +11,7 @@ import { clearRecentActivities, getActivityPopularity, getInterestScore, getTime
 type SortMode = "soon" | "popular" | "newest" | "match";
 type TimeBucket = "全部" | "上午" | "下午" | "晚上";
 
-const categoryIcons: Record<Category, string> = { "自习搭子": "✎", "运动搭子": "♢", "饭搭子": "◒", "比赛搭子": "⚑", "游戏搭子": "◈", "兴趣活动": "✦" };
+const categoryIcons: Record<Category, string> = { 自习搭子: "✎", 运动搭子: "♢", 饭搭子: "◒", 比赛搭子: "⚑", 游戏搭子: "◈", 兴趣活动: "✦" };
 
 function activeActivity(activity: Activity) {
   return activity.status !== "cancelled" && activity.status !== "finished";
@@ -42,12 +42,14 @@ export default function DiscoverPage() {
     const filtered = activeActivities.filter((activity) => {
       const searchable = `${activity.title} ${activity.description} ${activity.location} ${activity.tags.join(" ")}`.toLowerCase();
       const available = activity.memberIds.length < activity.maxMembers;
-      return (category === "全部" || activity.category === category)
-        && (!normalizedKeyword || searchable.includes(normalizedKeyword))
-        && (!date || activity.startTime.slice(0, 10) === date)
-        && (!normalizedPlace || activity.location.toLowerCase().includes(normalizedPlace))
-        && (timeBucket === "全部" || getTimeBucket(activity.startTime) === timeBucket)
-        && (!onlyAvailable || available);
+      return (
+        (category === "全部" || activity.category === category) &&
+        (!normalizedKeyword || searchable.includes(normalizedKeyword)) &&
+        (!date || activity.startTime.slice(0, 10) === date) &&
+        (!normalizedPlace || activity.location.toLowerCase().includes(normalizedPlace)) &&
+        (timeBucket === "全部" || getTimeBucket(activity.startTime) === timeBucket) &&
+        (!onlyAvailable || available)
+      );
     });
     return filtered.sort((a, b) => {
       if (sort === "popular") return getActivityPopularity(b) - getActivityPopularity(a);
@@ -57,14 +59,38 @@ export default function DiscoverPage() {
     });
   }, [activeActivities, category, currentUser, date, keyword, onlyAvailable, place, sort, timeBucket]);
 
-  const recommended = useMemo(() => [...activeActivities].sort((a, b) => getInterestScore(b, currentUser) - getInterestScore(a, currentUser) || getActivityPopularity(b) - getActivityPopularity(a)).slice(0, 3), [activeActivities, currentUser]);
-  const recentActivities = useMemo(() => recentIds.map((id) => data?.activities.find((activity) => activity.id === id)).filter((activity): activity is Activity => Boolean(activity && activeActivity(activity))).slice(0, 3), [data?.activities, recentIds]);
-  const hotCategories = useMemo(() => categories.map((item) => ({ name: item, count: activeActivities.filter((activity) => activity.category === item).length })).filter((item) => item.count > 0).sort((a, b) => b.count - a.count).slice(0, 3), [activeActivities]);
+  const recommended = useMemo(
+    () => [...activeActivities].sort((a, b) => getInterestScore(b, currentUser) - getInterestScore(a, currentUser) || getActivityPopularity(b) - getActivityPopularity(a)).slice(0, 3),
+    [activeActivities, currentUser],
+  );
+  const recentActivities = useMemo(
+    () =>
+      recentIds
+        .map((id) => data?.activities.find((activity) => activity.id === id))
+        .filter((activity): activity is Activity => Boolean(activity && activeActivity(activity)))
+        .slice(0, 3),
+    [data?.activities, recentIds],
+  );
+  const hotCategories = useMemo(
+    () =>
+      categories
+        .map((item) => ({ name: item, count: activeActivities.filter((activity) => activity.category === item).length }))
+        .filter((item) => item.count > 0)
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 3),
+    [activeActivities],
+  );
   const hasFilters = Boolean(keyword || category !== "全部" || date || place || timeBucket !== "全部" || onlyAvailable);
   const todayCount = activeActivities.filter((activity) => activity.startTime.slice(0, 10) === "2026-07-19").length;
 
   const resetFilters = () => {
-    setKeyword(""); setCategory("全部"); setDate(""); setPlace(""); setTimeBucket("全部"); setOnlyAvailable(false); setSort("soon");
+    setKeyword("");
+    setCategory("全部");
+    setDate("");
+    setPlace("");
+    setTimeBucket("全部");
+    setOnlyAvailable(false);
+    setSort("soon");
   };
 
   if (loading) return <main className="page"><div className="card py-16 text-center text-slate-500">正在加载校园活动…</div></main>;

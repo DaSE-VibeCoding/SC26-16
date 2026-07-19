@@ -7,12 +7,12 @@ import { rememberActivity } from "@/lib/discover";
 import { Activity } from "@/lib/types";
 
 const tones: Record<string, string> = {
-  "自习搭子": "bg-sky-50 text-sky-600",
-  "运动搭子": "bg-emerald-50 text-emerald-600",
-  "饭搭子": "bg-orange-50 text-orange-600",
-  "比赛搭子": "bg-violet-50 text-violet-600",
-  "游戏搭子": "bg-rose-50 text-rose-600",
-  "兴趣活动": "bg-amber-50 text-amber-600",
+  自习搭子: "bg-sky-50 text-sky-600",
+  运动搭子: "bg-emerald-50 text-emerald-600",
+  饭搭子: "bg-orange-50 text-orange-600",
+  比赛搭子: "bg-violet-50 text-violet-600",
+  游戏搭子: "bg-rose-50 text-rose-600",
+  兴趣活动: "bg-amber-50 text-amber-600",
 };
 
 function statusLabel(activity: Activity, free: number) {
@@ -31,6 +31,7 @@ export function ActivityCard({ activity }: { activity: Activity }) {
   const status = statusLabel(activity, free);
   const favorite = useMemo(() => Boolean(currentUser && data?.favorites.some((item) => item.userId === currentUser.id && item.activityId === activity.id)), [activity.id, currentUser, data?.favorites]);
   const formattedTime = new Date(activity.startTime).toLocaleString("zh-CN", { month: "numeric", day: "numeric", weekday: "short", hour: "2-digit", minute: "2-digit" });
+  const formattedEnd = new Date(activity.endTime).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
 
   const handleFavorite = () => {
     if (!currentUser) {
@@ -57,9 +58,10 @@ export function ActivityCard({ activity }: { activity: Activity }) {
       <h3 className="line-clamp-2 text-lg font-black text-ink group-hover:text-brand">{activity.title}</h3>
       <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-500">{activity.description}</p>
       <div className="mt-4 space-y-1.5 text-sm text-slate-600">
-        <p>◷ {formattedTime}</p>
+        <p>◷ {formattedTime} - {formattedEnd}</p>
         <p className="truncate">⌖ {activity.location}</p>
         <p>◉ {activity.memberIds.length}/{activity.maxMembers} 人 · {free ? `还可加入 ${free} 人` : "等待下一场活动"}</p>
+        {activity.cancelReason && <p className="line-clamp-1 text-xs text-rose-500">取消原因：{activity.cancelReason}</p>}
       </div>
       <div className="mt-auto flex flex-wrap gap-1.5 pt-4">{activity.tags.slice(0, 4).map((tag) => <span key={tag} className="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-500">#{tag}</span>)}</div>
     </Link>

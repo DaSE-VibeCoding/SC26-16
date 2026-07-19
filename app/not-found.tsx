@@ -1,0 +1,2 @@
+import Link from "next/link";
+export default function NotFound() { return <main className="page grid min-h-[60vh] place-items-center text-center"><section className="card max-w-md"><p className="text-4xl">⌕</p><h1 className="mt-4 text-2xl font-black text-ink">没有找到这个页面</h1><p className="mt-3 text-sm text-slate-500">它可能不存在，或已在恢复演示数据时被清除。</p><Link className="btn-primary mt-6" href="/">返回发现页</Link></section></main>; }
