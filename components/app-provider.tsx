@@ -1,5 +1,5 @@
 "use client";
-import { AppData, CreateActivityInput, Report, SubmitEvaluationInput, UpdateProfileInput, UpdateSettingsInput, User } from "@/lib/types";
+import { AppData, CreateActivityInput, Report, SubmitEvaluationInput, UpdateActivityInput, UpdateProfileInput, UpdateSettingsInput, User } from "@/lib/types";
 import { storage } from "@/lib/storage";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
@@ -13,6 +13,7 @@ type AppContextValue = {
   register: (input: { nickname: string; college: string; grade: string; interests: string[]; password: string }) => Promise<void>;
   reset: () => Promise<void>;
   createActivity: (input: CreateActivityInput) => string;
+  updateActivity: (activityId: string, input: UpdateActivityInput) => void;
   apply: (activityId: string, message: string) => void;
   review: (applicationId: string, approved: boolean) => void;
   exitActivity: (activityId: string) => void;
@@ -53,6 +54,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!currentUser) throw new Error("请先登录后再操作");
     return currentUser;
   };
+  const requireAdmin = () => {
+    const user = requireUser();
+    if (!user.isAdmin) throw new Error("仅演示管理员可以执行此操作");
+    return user;
+  };
   const value = useMemo<AppContextValue>(
     () => ({
       data,
@@ -79,6 +85,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const activity = storage.createActivity(requireUser().id, input);
         refresh();
         return activity.id;
+      },
+      updateActivity: (activityId, input) => {
+        storage.updateActivity(requireUser().id, activityId, input);
+        refresh();
       },
       apply: (activityId, message) => {
         storage.apply(requireUser().id, activityId, message);
@@ -154,13 +164,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         refresh();
       },
       resolveReport: (reportId, action) => {
-        requireUser();
-        storage.resolveReport(reportId, action);
+        storage.resolveReport(requireAdmin().id, reportId, action);
         refresh();
       },
       moderateActivity: (activityId, action) => {
-        requireUser();
-        storage.moderateActivity(activityId, action);
+        storage.moderateActivity(requireAdmin().id, activityId, action);
         refresh();
       },
     }),
